@@ -2,7 +2,8 @@
 
 use std::time::Duration;
 
-use mactor::{Actor, Sender};
+use mactor::{Actor, Joinable, Sender};
+use tokio::task::JoinHandle;
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 #[tokio::main]
@@ -38,7 +39,7 @@ impl Actor for Counter {
     fn spawn(mut self, mut context: Self::Context) -> Self::Handle {
         let (tx, mut rx) = tokio::sync::mpsc::channel(512);
 
-        tokio::spawn(async move {
+        let handle = tokio::spawn(async move {
             println!("Spawning Actor!");
             println!("Initial value {}", self.0);
 
@@ -55,12 +56,13 @@ impl Actor for Counter {
                 println!("totalt messages recieved {}", context.messages);
             }
         });
-        CounterHandle { tx }
+        CounterHandle { tx,  handle}
     }
 }
 
 struct CounterHandle {
     tx: tokio::sync::mpsc::Sender<CounterMessage>,
+    handle: JoinHandle<()>
 }
 
 impl mactor::Handle for CounterHandle {
@@ -86,5 +88,12 @@ impl CounterContext {
         CounterContext {
             messages: Default::default(),
         }
+    }
+}
+
+impl Joinable<()> for CounterHandle {
+    async fn join(self) -> Result<()> {
+        let x = self.handle.await?;
+        Ok(x)
     }
 }

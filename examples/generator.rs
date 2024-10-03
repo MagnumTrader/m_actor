@@ -63,6 +63,7 @@ impl Actor for Generator {
     /// Multiplier for the generator
     type Context = ();
 
+    #[allow(unreachable_code)] // you break the loop by cannling shutdown on the handle
     fn spawn(self, _context: Self::Context) -> Self::Handle {
         let (tx, rx) = tokio::sync::mpsc::channel(128);
 
@@ -70,7 +71,7 @@ impl Actor for Generator {
             println!("task is starting");
 
             loop {
-                tx.send(GenMessage::Add).await;
+                let _ = tx.send(GenMessage::Add).await;
                 tokio::time::sleep(Duration::from_secs(1)).await;
             };
             println!("task is now ending");
