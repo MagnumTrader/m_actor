@@ -3,7 +3,6 @@
 
 use std::{marker::PhantomData, time::Duration};
 
-use futures::Sink;
 use mactor::{Actor, Handle, Reciever};
 use tokio::task::JoinHandle;
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
