@@ -1,10 +1,8 @@
 #![warn(missing_docs)]
 //! Mactor - Market Actor
-//! Framework for working with actors in a Trading setting.
-//!
-//!
-//! have a Actor trait that takes a M
-//! ActorHandle trait
+//! Framework for working with actors in a Trading setting,
+//! if that even makes any difference, 
+//! but heads up that it will be changed to my needs with that background.
 
 /// The [`Actor`] trait is used to enforce spawning the task,
 /// and return a Handle which the user can assume  to be able to communicate with the [`Actor`].
@@ -21,6 +19,7 @@ where
 
     type Context;
 
+    //TODO: should return a result?
     fn spawn(self, context: Self::Context) -> Self::Handle;
 }
 

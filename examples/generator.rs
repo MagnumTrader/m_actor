@@ -1,17 +1,12 @@
-#![allow(unused, unreachable_code)]
-
-
-use std::{marker::PhantomData, time::Duration};
-
 use mactor::{Actor, Handle, Reciever};
+
+use std::time::Duration;
 use tokio::task::JoinHandle;
+
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+
 #[tokio::main]
-
 async fn main() -> Result<()> {
-
-    let supeer = SuperVisor::<AmazingStrategy>::new();
-    supeer.doit(AmazingStrategy);
 
     let generator = Generator;
 
@@ -68,48 +63,19 @@ impl Actor for Generator {
     /// Multiplier for the generator
     type Context = ();
 
-    fn spawn(self, context: Self::Context) -> Self::Handle {
+    fn spawn(self, _context: Self::Context) -> Self::Handle {
         let (tx, rx) = tokio::sync::mpsc::channel(128);
 
         let handle = tokio::spawn(async move {
             println!("task is starting");
+
             loop {
                 tx.send(GenMessage::Add).await;
                 tokio::time::sleep(Duration::from_secs(1)).await;
-            }
+            };
             println!("task is now ending");
         });
 
         GenHandle { rx, handle }
     }
 }
-
-#[derive(Debug)]
-struct AmazingStrategy;
-
-struct SuperVisor<T>{
-    p: PhantomData<T>
-}
-
-impl Actor for SuperVisor<AmazingStrategy> {
-    type Handle = GenHandle;
-
-    type Context = ();
-
-    fn spawn(self, context: Self::Context) -> Self::Handle {
-        todo!()
-    }
-}
-
-
-impl <T: std::fmt::Debug> SuperVisor<T> {
-    fn new() -> Self {
-        Self {
-            p: PhantomData,
-        }
-    }
-    fn doit(&self, t: T)  {
-        println!("it works bru {:?}", t);
-    }
-}
-
