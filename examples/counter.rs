@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 
-use mactor::{Actor, ActorHandle, ActorSender};
+use mactor::{Actor, Sender};
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 #[tokio::main]
@@ -31,13 +31,9 @@ pub enum CounterMessage {
     Reset,
 }
 
-impl Actor<CounterMessage> for Counter {
+impl Actor for Counter {
     type Context = CounterContext;
     type Handle = CounterHandle;
-
-    async fn run(self) {
-        todo!()
-    }
 
     fn spawn(mut self, mut context: Self::Context) -> Self::Handle {
         let (tx, mut rx) = tokio::sync::mpsc::channel(512);
@@ -67,7 +63,7 @@ struct CounterHandle {
     tx: tokio::sync::mpsc::Sender<CounterMessage>,
 }
 
-impl ActorHandle<CounterMessage> for CounterHandle {
+impl mactor::Handle for CounterHandle {
     fn shutdown(&mut self) {
         todo!()
     }
@@ -76,7 +72,7 @@ impl ActorHandle<CounterMessage> for CounterHandle {
     }
 }
 
-impl ActorSender<CounterMessage> for CounterHandle {
+impl mactor::Sender<CounterMessage> for CounterHandle {
     async fn send(&mut self, message: CounterMessage) {
         self.tx.send(message).await;
     }
