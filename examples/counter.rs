@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use mactor::{Actor, Joinable, Sender};
 use tokio::task::JoinHandle;
-type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+type Result<T> = std::result::Result<T, mactor::Error>;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -56,13 +56,13 @@ impl Actor for Counter {
                 println!("totalt messages recieved {}", context.messages);
             }
         });
-        CounterHandle { tx,  handle}
+        CounterHandle { tx, handle }
     }
 }
 
 struct CounterHandle {
     tx: tokio::sync::mpsc::Sender<CounterMessage>,
-    handle: JoinHandle<()>
+    handle: JoinHandle<()>,
 }
 
 impl mactor::Handle for CounterHandle {
@@ -93,7 +93,6 @@ impl CounterContext {
 
 impl Joinable<()> for CounterHandle {
     async fn join(self) -> Result<()> {
-        let x = self.handle.await?;
-        Ok(x)
+        self.handle.await
     }
 }

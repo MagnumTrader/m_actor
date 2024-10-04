@@ -1,3 +1,10 @@
+//! this is the main document comments
+//!
+//!
+//!
+//!
+//!
+
 use mactor::{Actor, Handle, Reciever};
 
 use std::time::Duration;
@@ -13,7 +20,10 @@ async fn main() -> Result<()> {
     let mut gen_handle = generator.spawn(());
     
 
+    // im going to comment like this
     let mut current = 0;
+    // and this bru
+
     while let Some(msg) = gen_handle.recv().await {
         match msg {
             GenMessage::Add => current += 1
