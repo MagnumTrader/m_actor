@@ -1,15 +1,21 @@
-#![warn(missing_docs)]
+#![allow(unused, unreachable_code)]
 //! Mactor - Market Actor
 //! Framework for working with actors in a Trading setting,
-//! if that even makes any difference, 
+//! if that even makes any difference,
 //! but heads up that it will be changed to my needs with that background.
 //!
 
+static SETTINGS: Mutex<i32> = Mutex::new(0);
+
+mod concurrency;
 mod error;
+use std::sync::Mutex;
+
 pub use error::Error;
+pub type Result<T> = std::result::Result<T, crate::Error>;
 
-type Result<T> = std::result::Result<T, crate::Error>;
-
+pub trait Sendable: Sized + Send + Sync + 'static {}
+impl<T> Sendable for T where T: Sized + Send + Sync + 'static {}
 
 /// The [`Actor`] trait is used to enforce spawning the task,
 /// and return a Handle which the user can assume  to be able to communicate with the [`Actor`].
@@ -17,96 +23,68 @@ type Result<T> = std::result::Result<T, crate::Error>;
 /// if the latter, we need to give out the handle before.
 /// i was thinking that could be a builder pattern. but i can get back to that later
 /// check out [this](obsidian://open?vault=Notes&file=Bon%20-%20Builder%20Crate)
-pub trait Actor
+pub trait Actor: Sized + Send + 'static {
+    type Msg: Send;
+    type Context: Send;
+    type Arguments: Send;
+
+    fn pre_start(arguments: Self::Arguments) -> Result<Self::Context>;
+    fn on_message(&mut self, ctx: &mut Self::Context, msg: Self::Msg);
+    fn on_stop(&mut self, ctx: &mut Self::Context) {
+        println!("Actor exiting gracefully");
+    }
+}
+
+impl<T> ActorRuntime for T where T: Actor + Sendable {}
+
+pub trait ActorRuntime
 where
-    Self::Handle: Handle,
+    Self: Actor,
 {
-    type Handle;
+    fn spawn(mut self, args: Self::Arguments) -> Handle<Self::Msg> {
+        let (signal_tx, mut signal_rx) = concurrency::oneshot();
+        let (supervisor_tx, supervisor_rx) = concurrency::mpsc_bounded(32);
+        let (message_tx, mut message_rx) = concurrency::mpsc_unbounded::<Self::Msg>();
 
-    type Context;
+        tokio::spawn(async move {
+            let mut ctx = Self::pre_start(args).unwrap();
 
-    fn spawn(self, context: Self::Context) -> Self::Handle;
+            loop {
+                tokio::select! {
+                    biased;
+                    termination = &mut signal_rx => break,
+                    Some(msg) = message_rx.recv() => {
+                        self.on_message(&mut ctx, msg)
+                    }
+                }
+            }
+            self.on_stop(&mut ctx);
+        });
+
+        Handle {
+            signal_tx: Some(signal_tx),
+            supervisor_tx,
+            message_tx,
+        }
+    }
 }
 
-/// The `Handle` trait defines a basic handle for controlling an actor. It
-/// includes the ability to shut down the actor and check if it is still
-/// alive.
-///
-/// # Example
-/// ```ignore
-/// struct MyHandle {
-///     handle: JoinHandle<()>
-/// };
-///
-/// impl Handle for MyHandle {
-///     fn shutdown(&mut self) {
-///         // handle shutdown logic here
-///         self.handle.abort();
-///     }
-///     
-///     async fn is_alive(&mut self) -> bool {
-///         true
-///     }
-/// }
-/// ```
-///
-/// [`Actor`] // for extended functionality.
-pub trait Handle where Self: Sized {
-    fn shutdown(&mut self);
-    #[allow(async_fn_in_trait)]
-    async fn is_alive(&mut self) -> bool;
+pub struct Handle<T> {
+    signal_tx: Option<concurrency::OneShotSender<Signal>>,
+    supervisor_tx: concurrency::MpscSender<i32>, // make supervisor messages later
+    message_tx: concurrency::UnboundedMpscSender<T>,
 }
 
-
-/// The `Sender<T>` trait extends a [`Handle`] implementor.
-/// It includes functionality to send messages to the [`Actor`] with the intention
-/// if altering its functionality and 
-///
-/// Actors communicate via messages.
-///
-/// # Examples
-///```ignore
-/// struct MyHandle {
-///     handle: JoinHandle<()>
-///     tx: tokio::sync::mpsc::Sender<MyActorMessage>
-/// };
-///
-/// enum MyActorMessage {
-///     DoSomethingImportant,
-///     GiveMeSomethingBack {response: ()} // Oneshot channels fits well here
-///     Shutdown,
-/// }
-///
-/// impl Handle for MyHandle {
-///     fn shutdown(&mut self) {
-///         // handle shutdown logic here
-///         self.handle.abort();
-///     }
-///     
-///     async fn is_alive(&mut self) -> bool {
-///         true
-///     }
-/// }
-///
-/// impl Sender<MyActorMessage> for MyHandle {
-///     async fn send(&mut self, message: MyActorMessage) {
-///        let _ = self.tx.send(message).await;
-///     }
-/// }
-///```
-
-pub trait Sender<T>: Handle {
-    #[allow(async_fn_in_trait)]
-    async fn send(&mut self, message: T);
+impl<M> Handle<M> {
+    // send without waiting
+    pub fn send(&mut self, msg: M)  {
+        let _ = self.message_tx.send(msg);
+    }
+    pub fn kill(&mut self)  {
+        let _ = self.signal_tx.take().unwrap().send(Signal::Kill);
+    }
 }
 
-pub trait Reciever<T>: Handle {
-    #[allow(async_fn_in_trait)]
-    async fn recv(&mut self) -> Option<T>;
-}
-
-pub trait Joinable<T>:Handle {
-    #[allow(async_fn_in_trait)]
-    async fn join(self) -> Result<T>;
-    
+pub enum Signal {
+    Kill,
 }
