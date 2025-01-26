@@ -1,15 +1,15 @@
 //! # m_actor - Market Actor Framework
 //! A lightweight actor framework for concurrent message processing in Rust.
-//! 
+//!
 //! ## Overview
-//! 
+//!
 //! This module provides a trait-based actor system with:
 //! - Spawn and message handling capabilities
 //! - Concurrent message passing
 //! - Flexible actor lifecycle management
-//! 
+//!
 //! ## Key Components
-//! 
+//!
 //! - [`Actor`]: Defines the core behavior for actors
 //! - [`Handle`]: Provides interaction with spawned actors
 //! - [`ActorCell`]: Internal management of actor communication channels
