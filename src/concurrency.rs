@@ -1,5 +1,6 @@
+//! type aliases for easier and clearer imports.
 pub type OneShotSender<T> = tokio::sync::oneshot::Sender<T>;
-pub type OneShotReader<T> = tokio::sync::oneshot::Receiver<T>;
+pub type OneShotReciever<T> = tokio::sync::oneshot::Receiver<T>;
 
 pub type MpscSender<T> = tokio::sync::mpsc::Sender<T>;
 pub type MpscReciever<T> = tokio::sync::mpsc::Receiver<T>;
@@ -10,7 +11,7 @@ pub type UnboundedMpscReciever<T> = tokio::sync::mpsc::UnboundedReceiver<T>;
 pub type BroadcastSender<T> = tokio::sync::broadcast::Sender<T>;
 pub type BroadcastReciever<T> = tokio::sync::broadcast::Receiver<T>;
 
-pub fn oneshot<T>() -> (OneShotSender<T>, OneShotReader<T>) {
+pub fn oneshot<T>() -> (OneShotSender<T>, OneShotReciever<T>) {
     tokio::sync::oneshot::channel()
 }
 

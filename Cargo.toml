@@ -1,5 +1,5 @@
 [package]
-name = "mactor"
+name = "m_actor"
 version = "0.1.0"
 edition = "2021"
 author = "Magnum"
@@ -7,3 +7,4 @@ author = "Magnum"
 [dependencies]
 derive_more = { version = "1.0.0", features = ["from"] }
 tokio = { version = "1.40.0", features = ["macros", "rt", "rt-multi-thread", "sync", "time"] }
+tokio-stream = { version = "0.1.17", features = ["full"] }

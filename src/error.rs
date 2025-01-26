@@ -4,8 +4,6 @@ use tokio::task::JoinError;
 /// Errors for the [`mactor`] crate
 #[derive(Debug, From)]
 pub enum Error {
-
-    /// Error for implementors of [`mactor::Joinable`]
     JoinError(JoinError)
 }
 
